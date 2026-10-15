@@ -1,0 +1,53 @@
+name: monitoring
+
+services:
+  cadvisor:
+    build: ./Cadvisor
+    container_name: cadvisor
+    restart: unless-stopped
+    privileged: true
+    cgroup: host
+    devices:
+      - /dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /run/containerd/containerd.sock:/run/containerd/containerd.sock:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+
+  node_exporter:
+    build: ./NodeExporter
+    container_name: node_exporter
+    restart: unless-stopped
+    pid: host
+    volumes:
+      - /:/host:ro
+
+  prometheus:
+    build: ./Prometheus
+    container_name: prometheus
+    restart: unless-stopped
+    depends_on:
+      - cadvisor
+      - node_exporter
+    volumes:
+      - prometheus_data:/prometheus
+
+  grafana:
+    build: ./Grafana
+    container_name: grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+volumes:
+  prometheus_data:
+    name: prometheus_prometheus_data
+  grafana_data:
+    name: grafana_grafana_data
